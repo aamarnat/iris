@@ -73,8 +73,15 @@ from .tensor_utils import (
 )
 
 from . import hip
-from . import experimental
-from . import ops
+
+# Import experimental features (optional, for users who want experimental APIs)
+# Temporarily commented out due to Triton compatibility issues with _aggregate
+# from . import experimental
+
+# Import ops module (fused GEMM+CCL operations)
+# Temporarily commented out due to Triton compatibility issues with _aggregate in iris.x
+# from . import ops
+
 from . import tensor_creation
 from .logging import (
     set_logger_level,
@@ -108,8 +115,8 @@ __all__ = [
     "CUDAArrayInterface",
     "tensor_from_ptr",
     "hip",
-    "experimental",
-    "ops",
+    # "experimental",  # Experimental features including iris_gluon - temporarily disabled
+    # "ops",  # Fused GEMM+CCL operations - temporarily disabled
     "tensor_creation",
     "set_logger_level",
     "logger",

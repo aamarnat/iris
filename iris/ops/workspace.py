@@ -42,6 +42,13 @@ class FusedWorkspace:
     aux_buffer: Optional[torch.Tensor] = None  # Generic buffer for intermediate results
     locks: Optional[torch.Tensor] = None  # Synchronization primitives
 
+    # Versioned lock counter -- incremented each call so lock-based variants
+    # (one_shot, two_shot) don't need lock zeroing between calls.
+    call_counter: int = 0
+
+    # Small tensor for stream-level cross-rank sync (replaces host barriers)
+    _barrier_tensor: Optional[torch.Tensor] = None
+
     prepared: bool = False
 
     def matches(
@@ -55,15 +62,9 @@ class FusedWorkspace:
         """
         Check if workspace can be reused for the given parameters.
 
-        Args:
-            operation: Operation type
-            shape: Problem dimensions (M, N, K)
-            dtype: Data type
-            world_size: Number of ranks
-            variant: Algorithm variant
-
-        Returns:
-            True if workspace matches and can be reused
+        Returns True if buffers are allocated for the same problem configuration.
+        Unlike before, this no longer checks ``prepared`` -- versioned locks and
+        overwrite-based variants (two_shot) don't require re-preparation.
         """
         return (
             self.operation == operation
@@ -82,4 +83,6 @@ class FusedWorkspace:
         """Free all allocated buffers."""
         self.aux_buffer = None
         self.locks = None
+        self._barrier_tensor = None
+        self.call_counter = 0
         self.prepared = False

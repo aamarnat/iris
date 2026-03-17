@@ -138,6 +138,9 @@ class Iris:
         # Initialize tracing
         self.tracing = Tracing(self)
 
+        # Cached device context tensor (populated on first get_device_context() call)
+        self._cached_device_context = None
+
     def __del__(self):
         """Cleanup resources on deletion."""
         try:
@@ -925,6 +928,12 @@ class Iris:
             >>>     ctx = DeviceContext.initialize(context_tensor, rank, world_size)
             >>>     data = ctx.load(buffer, from_rank=1)
         """
+        # Return cached tensor if available — the context data (rank, world_size,
+        # heap_bases) never changes after init, so we can safely reuse it.
+        # This avoids torch.tensor() allocation which is forbidden during CUDAGraph capture.
+        if self._cached_device_context is not None:
+            return self._cached_device_context
+
         # Convert heap_bases to a list for concatenation
         heap_bases_list = self.heap_bases.tolist()
 
@@ -959,6 +968,7 @@ class Iris:
             context_data += [0]  # trace_enabled = 0 (false)
 
         context_tensor = torch.tensor(context_data, dtype=torch.int64, device=self.device)
+        self._cached_device_context = context_tensor
 
         return context_tensor
 
