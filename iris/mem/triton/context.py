@@ -731,18 +731,23 @@ class Context:
             self.atomic_xchg(locks + tile_id, 0, to_rank=dest_rank, sem="release", scope="sys")
 
     @triton.jit
-    def all_reduce_one_shot(self, tile: Tile, src_view: TensorView, dst_view: TensorView, locks):
+    def all_reduce_one_shot(self, tile: Tile, src_view: TensorView, dst_view: TensorView, locks, call_number=1):
         """
         Tile-level all-reduce using one-shot algorithm.
 
         Each rank reads from all ranks and computes the reduction locally.
-        Uses locks as ready flags (producer-consumer).
+        Uses locks as versioned ready flags (producer-consumer): each rank waits
+        for remote tiles to publish ``call_number`` before loading them.
 
         Args:
             tile: Tile with position, dimensions, and local data.
             src_view: TensorView for source tensor (to load remote data).
             dst_view: TensorView for output tensor.
             locks: Pointer to lock array used as ready flags.
+            call_number: Monotonic version counter. Producers signal with this
+                value, consumers spin until they observe it, which removes the
+                need to zero the locks between calls. Defaults to 1, matching
+                the single-shot ``lock == 1`` protocol.
         """
         src_tile_ptr, mask = src_view.tile_ptr(tile)
         dst_tile_ptr, _ = dst_view.tile_ptr(tile)
@@ -755,7 +760,7 @@ class Context:
         for remote_rank in range(self.world_size):
             if remote_rank != self.rank:
                 lock_ptr = locks + tile_id
-                while self.atomic_add(lock_ptr, 0, to_rank=remote_rank, sem="acquire", scope="sys") != 1:
+                while self.atomic_add(lock_ptr, 0, to_rank=remote_rank, sem="acquire", scope="sys") != call_number:
                     pass
                 partial = self.load(src_tile_ptr, from_rank=remote_rank, mask=mask)
                 acc += partial.to(acc_dtype)
@@ -799,18 +804,25 @@ class Context:
                 tl.store(dst_tile_ptr, remote_result, mask=mask)
 
     @triton.jit
-    def all_reduce_two_shot(self, tile: Tile, src_view: TensorView, dst_view: TensorView, locks):
+    def all_reduce_two_shot(self, tile: Tile, src_view: TensorView, dst_view: TensorView, locks, call_number=1):
         """
         Tile-level all-reduce using two-shot algorithm with work distribution.
 
         Each rank reduces only its assigned tiles, then scatters the result.
         Uses interleaved distribution: rank handles tiles where tile_id % world_size == rank.
 
+        Uses locks as versioned ready flags: producers publish ``call_number``
+        and consumers spin until they observe it.
+
         Args:
             tile: Tile with position, dimensions, and local data.
             src_view: TensorView for source tensor.
             dst_view: TensorView for output tensor.
             locks: Pointer to lock array used as ready flags.
+            call_number: Monotonic version counter. Producers signal with this
+                value, consumers spin until they observe it, which removes the
+                need to zero the locks between calls. Defaults to 1, matching
+                the single-shot ``lock == 1`` protocol.
         """
         num_tiles_n = tl.cdiv(dst_view.N, tile.block_n)
         tile_id = tile.pid_m * num_tiles_n + tile.pid_n
@@ -826,7 +838,7 @@ class Context:
             for remote_rank in range(self.world_size):
                 if remote_rank != self.rank:
                     lock_ptr = locks + tile_id
-                    while self.atomic_add(lock_ptr, 0, to_rank=remote_rank, sem="acquire", scope="sys") != 1:
+                    while self.atomic_add(lock_ptr, 0, to_rank=remote_rank, sem="acquire", scope="sys") != call_number:
                         pass
                     partial = self.load(src_tile_ptr, from_rank=remote_rank, mask=mask)
                     acc += partial.to(acc_dtype)

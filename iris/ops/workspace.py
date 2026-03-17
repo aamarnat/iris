@@ -42,6 +42,13 @@ class FusedWorkspace:
     aux_buffer: Optional[torch.Tensor] = None  # Generic buffer for intermediate results
     locks: Optional[torch.Tensor] = None  # Synchronization primitives
 
+    # Versioned lock counter -- incremented each call so lock-based variants
+    # (one_shot, two_shot) don't need lock zeroing between calls.
+    call_counter: int = 0
+
+    # Small tensor for stream-level cross-rank sync (replaces host barriers)
+    _barrier_tensor: Optional[torch.Tensor] = None
+
     prepared: bool = False
 
     def matches(
@@ -64,6 +71,11 @@ class FusedWorkspace:
 
         Returns:
             True if workspace matches and can be reused
+
+        Note:
+            ``prepared`` stays ``True`` across calls for operations that use
+            versioned locks (see ``matmul_all_reduce``), so a matching workspace
+            is reused without re-running the preamble.
         """
         return (
             self.operation == operation
@@ -82,4 +94,6 @@ class FusedWorkspace:
         """Free all allocated buffers."""
         self.aux_buffer = None
         self.locks = None
+        self._barrier_tensor = None
+        self.call_counter = 0
         self.prepared = False
