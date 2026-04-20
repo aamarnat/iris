@@ -17,7 +17,7 @@ import math
 
 import torch
 
-from .logging import logger
+from .iris_logging import logger
 
 
 # ---------------------------------------------------------------------------

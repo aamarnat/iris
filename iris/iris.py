@@ -62,7 +62,7 @@ import torch
 import logging
 
 # Import logging functionality from the separate logging module
-from .logging import logger
+from .iris_logging import logger
 
 # Import tracing functionality
 from .tracing import Tracing, TraceEvent, DeviceTracing  # noqa: F401  re-export for iris.TraceEvent
@@ -1380,7 +1380,7 @@ class DeviceContext:
     heap_bases: tl.tensor
     tracing: DeviceTracing
 
-    @triton.constexpr_function
+    @triton.language.constexpr_function
     def __init__(self, rank, world_size, heap_bases, tracing):
         """
         Internal constructor - use DeviceContext.initialize() instead.
