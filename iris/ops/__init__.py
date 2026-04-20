@@ -1,6 +1,14 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
 
+import sys as _sys
+import os as _os
+
+_tb_include = _os.path.join("/workspace", "projects", "tritonblas", "include")
+if _os.path.isdir(_tb_include) and _tb_include not in _sys.path:
+    _sys.path.insert(0, _tb_include)
+del _sys, _os, _tb_include
+
 """
 iris.ops: High-level API for fused GEMM+CCL operations.
 
@@ -29,15 +37,15 @@ Available operations:
     - matmul_reduce_scatter: GEMM + Reduce-Scatter
 """
 
-from .config import FusedConfig
-from .workspace import FusedWorkspace
+from .config import FusedConfig  # noqa: E402
+from .workspace import FusedWorkspace  # noqa: E402
 
 # Import operations
 # from .matmul import matmul  # Simple single-GPU GEMM - TODO: implement
-from .matmul_all_reduce import matmul_all_reduce, matmul_all_reduce_preamble
-from .all_gather_matmul import all_gather_matmul, all_gather_matmul_preamble
-from .matmul_all_gather import matmul_all_gather
-from .matmul_reduce_scatter import matmul_reduce_scatter, matmul_reduce_scatter_preamble
+from .matmul_all_reduce import matmul_all_reduce, matmul_all_reduce_preamble  # noqa: E402
+from .all_gather_matmul import all_gather_matmul, all_gather_matmul_preamble  # noqa: E402
+from .matmul_all_gather import matmul_all_gather  # noqa: E402
+from .matmul_reduce_scatter import matmul_reduce_scatter, matmul_reduce_scatter_preamble  # noqa: E402
 
 
 class OpsNamespace:
