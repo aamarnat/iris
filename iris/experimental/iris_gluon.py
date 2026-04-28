@@ -46,6 +46,12 @@ _gluon_constexpr_function = getattr(
     gl, "constexpr_function", getattr(gluon, "constexpr_function", None)
 )
 
+if _gluon_constexpr_function is None:
+    raise ImportError(
+        "Cannot find constexpr_function in gluon or gluon.language. "
+        "Iris Gluon requires Triton >= 3.6.0 with Gluon support."
+    )
+
 from iris._distributed_helpers import (
     init_distributed,
     distributed_barrier,

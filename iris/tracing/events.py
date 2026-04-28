@@ -8,12 +8,7 @@ import triton
 import triton.language as tl
 from triton.language.core import _aggregate as aggregate
 
-# Compat shim: constexpr_function lives at triton.constexpr_function in
-# Triton 3.6.0+rocm7.2.0, but some future versions may expose it on
-# triton.language.  Try both locations so iris works on either.
-_constexpr_function = getattr(
-    tl, "constexpr_function", getattr(triton, "constexpr_function", None)
-)
+from iris._compat import _constexpr_function
 
 
 # Event type IDs to names mapping (used for export / display).
