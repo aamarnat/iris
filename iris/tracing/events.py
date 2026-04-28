@@ -8,6 +8,8 @@ import triton
 import triton.language as tl
 from triton.language.core import _aggregate as aggregate
 
+from .._triton_compat import constexpr_function
+
 
 # Event type IDs to names mapping (used for export / display).
 # Keep in sync with TraceEvent below.
@@ -75,7 +77,7 @@ class TraceEvent:
     atomic_min: tl.constexpr
     atomic_max: tl.constexpr
 
-    @triton.language.constexpr_function
+    @constexpr_function
     def __init__(self):
         # Data movement
         self.load = tl.constexpr(0)

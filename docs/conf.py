@@ -115,6 +115,7 @@ class PreserveDocstringMock:
 
 # Mock triton.language first
 triton_language_mock = MagicMock()
+triton_language_mock.constexpr_function = PreserveDocstringMock()
 sys.modules["triton.language"] = triton_language_mock
 sys.modules["triton.language.core"] = MagicMock()
 sys.modules["triton.language.core"]._aggregate = lambda cls: cls  # Preserve class

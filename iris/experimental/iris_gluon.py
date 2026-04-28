@@ -39,6 +39,12 @@ except ImportError as e:
 
 import triton.language as tl
 
+# Compat: gluon.language.constexpr_function may not exist in older Triton/ROCm builds.
+if hasattr(gl, "constexpr_function"):
+    _gluon_constexpr_function = gl.constexpr_function
+else:
+    from .._triton_compat import _constexpr_function_fallback as _gluon_constexpr_function
+
 from iris._distributed_helpers import (
     init_distributed,
     distributed_barrier,
@@ -235,7 +241,7 @@ class IrisDeviceCtx:
     heap_bases: gl.tensor
     tracing: GluonDeviceTracing
 
-    @gluon.language.constexpr_function
+    @_gluon_constexpr_function
     def __init__(self, cur_rank, num_ranks, heap_bases, tracing):
         self.cur_rank = cur_rank
         self.num_ranks = num_ranks
