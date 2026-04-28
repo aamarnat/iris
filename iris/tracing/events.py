@@ -4,7 +4,6 @@ Trace event type IDs and Triton-side enumeration.
 EVENT_NAMES and TraceEvent must stay in sync: same IDs for the same operations.
 """
 
-import triton
 import triton.language as tl
 from triton.language.core import _aggregate as aggregate
 
