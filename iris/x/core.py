@@ -9,12 +9,19 @@ These are used by the collective primitives to compute memory pointers and masks
 
 The module provides both:
 1. Device functions (tile_layout, tile_ptr, offset_ptr) - Always work, recommended
-2. OOP classes (Tile) - Clean API using @constexpr_function pattern
+2. OOP classes (Tile) - Clean API using @_constexpr_function pattern
 """
 
 import triton
 import triton.language as tl
 from triton.language.core import _aggregate as aggregate
+
+# Compat shim: constexpr_function lives at triton.constexpr_function in
+# Triton 3.6.0+rocm7.2.0, but some future versions may expose it on
+# triton.language.  Try both locations so iris works on either.
+_constexpr_function = getattr(
+    tl, "constexpr_function", getattr(triton, "constexpr_function", None)
+)
 
 
 @triton.jit
@@ -107,10 +114,10 @@ class TileView:
     """
     TileView storing BOTH runtime coordinates AND compile-time block sizes.
 
-    This class uses the @constexpr_function pattern discovered from Triton's gluon examples:
+    This class uses the @_constexpr_function pattern discovered from Triton's gluon examples:
     - Stores runtime coordinates (pid_m, pid_n) as tl.tensor (computed from tl.program_id)
     - Stores compile-time block sizes (block_m, block_n) as tl.constexpr
-    - Constructor is decorated with @constexpr_function to execute at compile-time
+    - Constructor is decorated with @_constexpr_function to execute at compile-time
 
     Example usage:
         pid = tl.program_id(0)
@@ -125,7 +132,7 @@ class TileView:
     block_m: tl.constexpr
     block_n: tl.constexpr
 
-    @triton.language.constexpr_function
+    @_constexpr_function
     def __init__(self, pid_m, pid_n, block_m, block_n):
         """
         Create a tile view with runtime coordinates and compile-time sizes.
@@ -196,7 +203,7 @@ class Tile:
     block_n: tl.constexpr
     data: tl.tensor
 
-    @triton.language.constexpr_function
+    @_constexpr_function
     def __init__(self, pid_m, pid_n, block_m, block_n, data):
         """
         Create a tile with runtime coordinates, compile-time sizes, and data.
@@ -251,7 +258,7 @@ def make_tensor_view(ptr, M, N, stride_m, stride_n):
     """
     Factory function to create a TensorView inside a JIT context.
 
-    This wrapper is needed because @triton.constexpr_function constructors
+    This wrapper is needed because @_constexpr_function constructors
     require a JIT context for proper semantic handling. It also converts
     int/constexpr values to tensors using the +0 trick.
 
@@ -296,7 +303,7 @@ class TensorView:
     stride_m: tl.tensor
     stride_n: tl.tensor
 
-    @triton.language.constexpr_function
+    @_constexpr_function
     def __init__(self, ptr, M, N, stride_m, stride_n):
         """
         Create a tensor view with pointer and dimensions/strides.
@@ -474,7 +481,7 @@ class AllReduceConfig:
     variant_code: tl.constexpr  # Integer code for variant
     locks_ptr: tl.tensor  # Pointer to locks (always required, may be dummy)
 
-    @triton.language.constexpr_function
+    @_constexpr_function
     def __init__(self, variant_code, locks_ptr):
         """
         Create an all_reduce configuration.

@@ -43,6 +43,13 @@ import triton
 import triton.language as tl
 from triton.language.core import _aggregate as aggregate
 
+# Compat shim: constexpr_function lives at triton.constexpr_function in
+# Triton 3.6.0+rocm7.2.0, but some future versions may expose it on
+# triton.language.  Try both locations so iris works on either.
+_constexpr_function = getattr(
+    tl, "constexpr_function", getattr(triton, "constexpr_function", None)
+)
+
 from iris._distributed_helpers import (
     init_distributed,
     distributed_barrier,
@@ -1380,7 +1387,7 @@ class DeviceContext:
     heap_bases: tl.tensor
     tracing: DeviceTracing
 
-    @triton.language.constexpr_function
+    @_constexpr_function
     def __init__(self, rank, world_size, heap_bases, tracing):
         """
         Internal constructor - use DeviceContext.initialize() instead.

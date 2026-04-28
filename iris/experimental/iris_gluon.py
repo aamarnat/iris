@@ -39,6 +39,13 @@ except ImportError as e:
 
 import triton.language as tl
 
+# Compat shim: constexpr_function lives at gluon.constexpr_function in
+# Triton 3.6.0+rocm7.2.0, but some future versions may expose it on
+# gluon.language.  Try both locations so iris works on either.
+_gluon_constexpr_function = getattr(
+    gl, "constexpr_function", getattr(gluon, "constexpr_function", None)
+)
+
 from iris._distributed_helpers import (
     init_distributed,
     distributed_barrier,
@@ -235,7 +242,7 @@ class IrisDeviceCtx:
     heap_bases: gl.tensor
     tracing: GluonDeviceTracing
 
-    @gluon.language.constexpr_function
+    @_gluon_constexpr_function
     def __init__(self, cur_rank, num_ranks, heap_bases, tracing):
         self.cur_rank = cur_rank
         self.num_ranks = num_ranks
